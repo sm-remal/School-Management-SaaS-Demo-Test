@@ -41,6 +41,7 @@ const prisma_1 = require("../../shared/prisma");
 const bcrypt = __importStar(require("bcryptjs"));
 const jwt = __importStar(require("jsonwebtoken"));
 const config_1 = __importDefault(require("../../config"));
+const AppError_1 = require("../../errors/AppError");
 const login = async (payload) => {
     const user = await prisma_1.prisma.platformUser.findUnique({
         where: { email: payload.email },
@@ -53,11 +54,11 @@ const login = async (payload) => {
         },
     });
     if (!user || user.status !== "ACTIVE") {
-        throw new Error("INVALID_CREDENTIALS");
+        throw new AppError_1.AppError(401, "Invalid email or password", "INVALID_CREDENTIALS");
     }
     const isPasswordValid = await bcrypt.compare(payload.password, user.passwordHash);
     if (!isPasswordValid) {
-        throw new Error("INVALID_CREDENTIALS");
+        throw new AppError_1.AppError(401, "Invalid email or password", "INVALID_CREDENTIALS");
     }
     const roles = user.roles.map((userRole) => userRole.role.code);
     const accessToken = jwt.sign({

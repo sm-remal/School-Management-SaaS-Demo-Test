@@ -1,5 +1,6 @@
 import type { CreateSchoolRequest } from "./school.interface";
-export declare class DuplicateSchoolEmailError extends Error {
+import { AppError } from "../../errors/AppError";
+export declare class DuplicateSchoolEmailError extends AppError {
     constructor(email: string);
 }
 export declare const buildTenantDatabaseUrl: (databaseName: string) => string;

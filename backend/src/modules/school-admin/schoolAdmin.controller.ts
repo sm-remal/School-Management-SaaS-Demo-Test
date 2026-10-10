@@ -1,29 +1,23 @@
 import type { Response } from "express";
 import type { SchoolAuthenticatedRequest } from "../../shared/schoolAuth.middleware";
 import { schoolAdminService } from "./schoolAdmin.service";
+import { AppError } from "../../errors/AppError";
 
 const getMe = async (req: SchoolAuthenticatedRequest, res: Response) => {
   if (!req.schoolUser) {
-    res.status(401).json({
-      success: false,
-      message: "School authentication token is required",
-    });
-    return;
+    throw new AppError(
+      401,
+      "School authentication token is required",
+      "SCHOOL_AUTH_TOKEN_REQUIRED",
+    );
   }
 
-  try {
-    const profile = await schoolAdminService.getProfile(req.schoolUser);
+  const profile = await schoolAdminService.getProfile(req.schoolUser);
 
-    res.json({
-      success: true,
-      data: profile,
-    });
-  } catch (error) {
-    res.status(404).json({
-      success: false,
-      message: error instanceof Error ? error.message : "Profile not found",
-    });
-  }
+  res.json({
+    success: true,
+    data: profile,
+  });
 };
 
 export const schoolAdminController = {

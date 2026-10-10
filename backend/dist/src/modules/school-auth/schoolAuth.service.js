@@ -43,6 +43,7 @@ const jwt = __importStar(require("jsonwebtoken"));
 const config_1 = __importDefault(require("../../config"));
 const prisma_1 = require("../../shared/prisma");
 const school_service_1 = require("../school/school.service");
+const AppError_1 = require("../../errors/AppError");
 const login = async (payload) => {
     const school = await prisma_1.prisma.school.findUnique({
         where: { schoolEmail: payload.email },
@@ -52,7 +53,7 @@ const login = async (payload) => {
         school.status !== "ACTIVE" ||
         !school.tenantDatabase ||
         school.tenantDatabase.status !== "INITIALIZED") {
-        throw new Error("INVALID_CREDENTIALS");
+        throw new AppError_1.AppError(401, "Invalid school admin email or password", "INVALID_SCHOOL_CREDENTIALS");
     }
     const tenantPool = new pg_1.Pool({
         connectionString: (0, school_service_1.buildTenantDatabaseUrl)(school.tenantDatabase.databaseName),
@@ -67,11 +68,11 @@ const login = async (payload) => {
       `, [payload.email]);
         const tenantUser = result.rows[0];
         if (!tenantUser || tenantUser.status !== "ACTIVE") {
-            throw new Error("INVALID_CREDENTIALS");
+            throw new AppError_1.AppError(401, "Invalid school admin email or password", "INVALID_SCHOOL_CREDENTIALS");
         }
         const isPasswordValid = await bcrypt.compare(payload.password, tenantUser.password_hash);
         if (!isPasswordValid) {
-            throw new Error("INVALID_CREDENTIALS");
+            throw new AppError_1.AppError(401, "Invalid school admin email or password", "INVALID_SCHOOL_CREDENTIALS");
         }
         const accessToken = jwt.sign({
             userId: tenantUser.id,

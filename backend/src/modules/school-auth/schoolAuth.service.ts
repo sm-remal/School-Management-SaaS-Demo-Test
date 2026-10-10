@@ -4,6 +4,7 @@ import * as jwt from "jsonwebtoken";
 import config from "../../config";
 import { prisma } from "../../shared/prisma";
 import { buildTenantDatabaseUrl } from "../school/school.service";
+import { AppError } from "../../errors/AppError";
 import type {
   SchoolLoginRequest,
   SchoolLoginResponse,
@@ -31,7 +32,11 @@ const login = async (
     !school.tenantDatabase ||
     school.tenantDatabase.status !== "INITIALIZED"
   ) {
-    throw new Error("INVALID_CREDENTIALS");
+    throw new AppError(
+      401,
+      "Invalid school admin email or password",
+      "INVALID_SCHOOL_CREDENTIALS",
+    );
   }
 
   const tenantPool = new Pool({
@@ -52,7 +57,11 @@ const login = async (
     const tenantUser = result.rows[0];
 
     if (!tenantUser || tenantUser.status !== "ACTIVE") {
-      throw new Error("INVALID_CREDENTIALS");
+      throw new AppError(
+        401,
+        "Invalid school admin email or password",
+        "INVALID_SCHOOL_CREDENTIALS",
+      );
     }
 
     const isPasswordValid = await bcrypt.compare(
@@ -61,7 +70,11 @@ const login = async (
     );
 
     if (!isPasswordValid) {
-      throw new Error("INVALID_CREDENTIALS");
+      throw new AppError(
+        401,
+        "Invalid school admin email or password",
+        "INVALID_SCHOOL_CREDENTIALS",
+      );
     }
 
     const accessToken = jwt.sign(

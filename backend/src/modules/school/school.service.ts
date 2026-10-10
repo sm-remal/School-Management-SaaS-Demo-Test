@@ -4,10 +4,17 @@ import * as bcrypt from "bcryptjs";
 import config from "../../config";
 import { prisma } from "../../shared/prisma";
 import type { CreateSchoolRequest } from "./school.interface";
+import { AppError } from "../../errors/AppError";
 
-export class DuplicateSchoolEmailError extends Error {
+export class DuplicateSchoolEmailError extends AppError {
   constructor(email: string) {
-    super(`A school with email ${email} already exists`);
+    super(
+      409,
+      `A school with email ${email} already exists`,
+      "DUPLICATE_SCHOOL_EMAIL",
+      undefined,
+      { field: "schoolEmail" },
+    );
     this.name = "DuplicateSchoolEmailError";
   }
 }

@@ -1,1 +1,1 @@
-{"version":3,"file":"globalErrorHandler.d.ts","sourceRoot":"","sources":["../../../src/middleware/globalErrorHandler.ts"],"names":[],"mappings":""}
+{"version":3,"file":"globalErrorHandler.d.ts","sourceRoot":"","sources":["../../../src/middleware/globalErrorHandler.ts"],"names":[],"mappings":"AAAA,OAAO,KAAK,EAAE,mBAAmB,EAAE,MAAM,SAAS,CAAC;AAenD,eAAO,MAAM,kBAAkB,EAAE,mBA6ChC,CAAC"}

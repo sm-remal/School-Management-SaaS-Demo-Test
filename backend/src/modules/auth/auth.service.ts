@@ -3,6 +3,7 @@ import { prisma } from "../../shared/prisma";
 import * as bcrypt from "bcryptjs";
 import * as jwt from "jsonwebtoken";
 import config from "../../config";
+import { AppError } from "../../errors/AppError";
 
 const login = async (payload: LoginRequest): Promise<LoginResponse> => {
   const user = await prisma.platformUser.findUnique({
@@ -17,7 +18,7 @@ const login = async (payload: LoginRequest): Promise<LoginResponse> => {
   });
 
   if (!user || user.status !== "ACTIVE") {
-    throw new Error("INVALID_CREDENTIALS");
+    throw new AppError(401, "Invalid email or password", "INVALID_CREDENTIALS");
   }
 
   const isPasswordValid = await bcrypt.compare(
@@ -26,7 +27,7 @@ const login = async (payload: LoginRequest): Promise<LoginResponse> => {
   );
 
   if (!isPasswordValid) {
-    throw new Error("INVALID_CREDENTIALS");
+    throw new AppError(401, "Invalid email or password", "INVALID_CREDENTIALS");
   }
 
   const roles = user.roles.map((userRole) => userRole.role.code);

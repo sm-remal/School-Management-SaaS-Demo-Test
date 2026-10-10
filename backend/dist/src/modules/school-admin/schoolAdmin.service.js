@@ -3,6 +3,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.schoolAdminService = void 0;
 const pg_1 = require("pg");
 const school_service_1 = require("../school/school.service");
+const AppError_1 = require("../../errors/AppError");
 const getProfile = async (payload) => {
     const pool = new pg_1.Pool({
         connectionString: (0, school_service_1.buildTenantDatabaseUrl)(payload.databaseName),
@@ -25,7 +26,7 @@ const getProfile = async (payload) => {
       `, [payload.userId]);
         const profile = result.rows[0];
         if (!profile) {
-            throw new Error("School profile not found");
+            throw new AppError_1.AppError(404, "School profile not found", "PROFILE_NOT_FOUND");
         }
         return {
             user: {

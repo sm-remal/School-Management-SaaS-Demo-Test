@@ -42,9 +42,10 @@ const pg_1 = require("pg");
 const bcrypt = __importStar(require("bcryptjs"));
 const config_1 = __importDefault(require("../../config"));
 const prisma_1 = require("../../shared/prisma");
-class DuplicateSchoolEmailError extends Error {
+const AppError_1 = require("../../errors/AppError");
+class DuplicateSchoolEmailError extends AppError_1.AppError {
     constructor(email) {
-        super(`A school with email ${email} already exists`);
+        super(409, `A school with email ${email} already exists`, "DUPLICATE_SCHOOL_EMAIL", undefined, { field: "schoolEmail" });
         this.name = "DuplicateSchoolEmailError";
     }
 }

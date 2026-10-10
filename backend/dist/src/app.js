@@ -9,6 +9,8 @@ const auth_route_1 = __importDefault(require("./modules/auth/auth.route"));
 const school_route_1 = __importDefault(require("./modules/school/school.route"));
 const schoolAuth_route_1 = __importDefault(require("./modules/school-auth/schoolAuth.route"));
 const schoolAdmin_route_1 = __importDefault(require("./modules/school-admin/schoolAdmin.route"));
+const globalErrorHandler_1 = require("./middleware/globalErrorHandler");
+const AppError_1 = require("./errors/AppError");
 const app = (0, express_1.default)();
 app.use((0, cors_1.default)());
 app.use(express_1.default.json());
@@ -30,5 +32,9 @@ app.use("/api/v1/auth", auth_route_1.default);
 app.use("/api/v1/school-auth", schoolAuth_route_1.default);
 app.use("/api/v1/school-admin", schoolAdmin_route_1.default);
 app.use("/api/v1/schools", school_route_1.default);
+app.use((_req, _res, next) => {
+    next(new AppError_1.AppError(404, "Route not found", "ROUTE_NOT_FOUND"));
+});
+app.use(globalErrorHandler_1.globalErrorHandler);
 exports.default = app;
 //# sourceMappingURL=app.js.map

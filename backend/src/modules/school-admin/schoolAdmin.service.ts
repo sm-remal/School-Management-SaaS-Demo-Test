@@ -1,6 +1,7 @@
 import { Pool } from "pg";
 import { buildTenantDatabaseUrl } from "../school/school.service";
 import type { SchoolAdminProfile } from "./schoolAdmin.interface";
+import { AppError } from "../../errors/AppError";
 
 interface TenantProfileRow {
   user_id: string;
@@ -42,7 +43,7 @@ const getProfile = async (payload: {
     const profile = result.rows[0];
 
     if (!profile) {
-      throw new Error("School profile not found");
+      throw new AppError(404, "School profile not found", "PROFILE_NOT_FOUND");
     }
 
     return {

@@ -3,6 +3,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.schoolController = void 0;
 const school_service_1 = require("./school.service");
 const school_validation_1 = require("./school.validation");
+const AppError_1 = require("../../errors/AppError");
 const listSchools = async (_req, res) => {
     const schools = await school_service_1.schoolService.listSchools();
     res.json({
@@ -14,48 +15,19 @@ const createSchool = async (req, res) => {
     const payload = req.body;
     const validation = (0, school_validation_1.validateCreateSchoolInput)(payload);
     if (!validation.success) {
-        res.status(400).json({
-            success: false,
-            message: "Validation failed",
-            errors: validation.errors,
-        });
-        return;
+        throw new AppError_1.AppError(400, "Validation failed", "VALIDATION_ERROR", validation.errors);
     }
     if (!req.user?.userId) {
-        res.status(401).json({
-            success: false,
-            message: "Authentication token is required",
-        });
-        return;
+        throw new AppError_1.AppError(401, "Authentication token is required", "AUTH_TOKEN_REQUIRED");
     }
-    try {
-        const school = await school_service_1.schoolService.createSchool(payload, req.user.userId);
-        res.status(school.status === "ACTIVE" ? 201 : 500).json({
-            success: school.status === "ACTIVE",
-            data: school,
-            message: school.status === "ACTIVE"
-                ? "School created successfully"
-                : "School provisioning failed",
-        });
-    }
-    catch (error) {
-        if (error instanceof school_service_1.DuplicateSchoolEmailError) {
-            res.status(409).json({
-                success: false,
-                message: "A school with this email already exists",
-                error: {
-                    code: "DUPLICATE_SCHOOL_EMAIL",
-                    field: "schoolEmail",
-                },
-            });
-            return;
-        }
-        const message = error instanceof Error ? error.message : "School create failed";
-        res.status(500).json({
-            success: false,
-            message,
-        });
-    }
+    const school = await school_service_1.schoolService.createSchool(payload, req.user.userId);
+    res.status(school.status === "ACTIVE" ? 201 : 500).json({
+        success: school.status === "ACTIVE",
+        data: school,
+        message: school.status === "ACTIVE"
+            ? "School created successfully"
+            : "School provisioning failed",
+    });
 };
 exports.schoolController = {
     listSchools,
