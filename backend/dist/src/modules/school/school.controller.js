@@ -39,8 +39,19 @@ const createSchool = async (req, res) => {
         });
     }
     catch (error) {
+        if (error instanceof school_service_1.DuplicateSchoolEmailError) {
+            res.status(409).json({
+                success: false,
+                message: "A school with this email already exists",
+                error: {
+                    code: "DUPLICATE_SCHOOL_EMAIL",
+                    field: "schoolEmail",
+                },
+            });
+            return;
+        }
         const message = error instanceof Error ? error.message : "School create failed";
-        res.status(409).json({
+        res.status(500).json({
             success: false,
             message,
         });

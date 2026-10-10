@@ -1,4 +1,8 @@
 import type { CreateSchoolRequest } from "./school.interface";
+export declare class DuplicateSchoolEmailError extends Error {
+    constructor(email: string);
+}
+export declare const buildTenantDatabaseUrl: (databaseName: string) => string;
 declare const listSchools: () => Promise<({
     tenantDatabase: {
         id: string;

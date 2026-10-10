@@ -5,6 +5,13 @@ import config from "../../config";
 import { prisma } from "../../shared/prisma";
 import type { CreateSchoolRequest } from "./school.interface";
 
+export class DuplicateSchoolEmailError extends Error {
+  constructor(email: string) {
+    super(`A school with email ${email} already exists`);
+    this.name = "DuplicateSchoolEmailError";
+  }
+}
+
 const quoteIdentifier = (identifier: string) => {
   if (!/^[a-z][a-z0-9_]*$/.test(identifier)) {
     throw new Error("Invalid database identifier");
@@ -13,7 +20,7 @@ const quoteIdentifier = (identifier: string) => {
   return `"${identifier}"`;
 };
 
-const buildTenantDatabaseUrl = (databaseName: string) => {
+export const buildTenantDatabaseUrl = (databaseName: string) => {
   const baseUrl = config.postgresAdminUrl || config.databaseUrl;
 
   if (!baseUrl) {
@@ -126,12 +133,22 @@ const listSchools = async () => {
 };
 
 const createSchool = async (payload: CreateSchoolRequest, actorUserId: string) => {
+  const schoolEmail = payload.schoolEmail.trim().toLowerCase();
+  const existingSchool = await prisma.school.findUnique({
+    where: { schoolEmail },
+    select: { id: true },
+  });
+
+  if (existingSchool) {
+    throw new DuplicateSchoolEmailError(schoolEmail);
+  }
+
   const databaseName = `school_${randomUUID().replace(/-/g, "").slice(0, 24)}`;
 
   const school = await prisma.school.create({
     data: {
-      schoolName: payload.schoolName,
-      schoolEmail: payload.schoolEmail,
+      schoolName: payload.schoolName.trim(),
+      schoolEmail,
       status: "PROVISIONING",
       tenantDatabase: {
         create: {
@@ -145,7 +162,7 @@ const createSchool = async (payload: CreateSchoolRequest, actorUserId: string) =
           action: "SCHOOL_PROVISIONING_STARTED",
           metadata: {
             databaseName,
-            schoolEmail: payload.schoolEmail,
+            schoolEmail,
           },
         },
       },
@@ -163,7 +180,11 @@ const createSchool = async (payload: CreateSchoolRequest, actorUserId: string) =
       data: { status: "CREATED" },
     });
 
-    await initializeTenantDatabase(databaseName, payload);
+    await initializeTenantDatabase(databaseName, {
+      ...payload,
+      schoolName: payload.schoolName.trim(),
+      schoolEmail,
+    });
 
     const activeSchool = await prisma.school.update({
       where: { id: school.id },

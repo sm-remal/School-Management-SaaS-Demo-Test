@@ -36,12 +36,19 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.schoolService = void 0;
+exports.schoolService = exports.buildTenantDatabaseUrl = exports.DuplicateSchoolEmailError = void 0;
 const node_crypto_1 = require("node:crypto");
 const pg_1 = require("pg");
 const bcrypt = __importStar(require("bcryptjs"));
 const config_1 = __importDefault(require("../../config"));
 const prisma_1 = require("../../shared/prisma");
+class DuplicateSchoolEmailError extends Error {
+    constructor(email) {
+        super(`A school with email ${email} already exists`);
+        this.name = "DuplicateSchoolEmailError";
+    }
+}
+exports.DuplicateSchoolEmailError = DuplicateSchoolEmailError;
 const quoteIdentifier = (identifier) => {
     if (!/^[a-z][a-z0-9_]*$/.test(identifier)) {
         throw new Error("Invalid database identifier");
@@ -57,6 +64,7 @@ const buildTenantDatabaseUrl = (databaseName) => {
     url.pathname = `/${databaseName}`;
     return url.toString();
 };
+exports.buildTenantDatabaseUrl = buildTenantDatabaseUrl;
 const createTenantDatabase = async (databaseName) => {
     const adminUrl = config_1.default.postgresAdminUrl || config_1.default.databaseUrl;
     if (!adminUrl) {
@@ -72,7 +80,7 @@ const createTenantDatabase = async (databaseName) => {
 };
 const initializeTenantDatabase = async (databaseName, payload) => {
     const tenantPool = new pg_1.Pool({
-        connectionString: buildTenantDatabaseUrl(databaseName),
+        connectionString: (0, exports.buildTenantDatabaseUrl)(databaseName),
     });
     const passwordHash = await bcrypt.hash(payload.initialAdminPassword, 12);
     try {
@@ -139,11 +147,19 @@ const listSchools = async () => {
     });
 };
 const createSchool = async (payload, actorUserId) => {
+    const schoolEmail = payload.schoolEmail.trim().toLowerCase();
+    const existingSchool = await prisma_1.prisma.school.findUnique({
+        where: { schoolEmail },
+        select: { id: true },
+    });
+    if (existingSchool) {
+        throw new DuplicateSchoolEmailError(schoolEmail);
+    }
     const databaseName = `school_${(0, node_crypto_1.randomUUID)().replace(/-/g, "").slice(0, 24)}`;
     const school = await prisma_1.prisma.school.create({
         data: {
-            schoolName: payload.schoolName,
-            schoolEmail: payload.schoolEmail,
+            schoolName: payload.schoolName.trim(),
+            schoolEmail,
             status: "PROVISIONING",
             tenantDatabase: {
                 create: {
@@ -157,7 +173,7 @@ const createSchool = async (payload, actorUserId) => {
                     action: "SCHOOL_PROVISIONING_STARTED",
                     metadata: {
                         databaseName,
-                        schoolEmail: payload.schoolEmail,
+                        schoolEmail,
                     },
                 },
             },
@@ -172,7 +188,11 @@ const createSchool = async (payload, actorUserId) => {
             where: { schoolId: school.id },
             data: { status: "CREATED" },
         });
-        await initializeTenantDatabase(databaseName, payload);
+        await initializeTenantDatabase(databaseName, {
+            ...payload,
+            schoolName: payload.schoolName.trim(),
+            schoolEmail,
+        });
         const activeSchool = await prisma_1.prisma.school.update({
             where: { id: school.id },
             data: {

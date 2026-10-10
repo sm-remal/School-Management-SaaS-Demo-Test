@@ -1,6 +1,9 @@
 import type { Response } from "express";
 import type { AuthenticatedRequest } from "../../shared/auth.middleware";
-import { schoolService } from "./school.service";
+import {
+  DuplicateSchoolEmailError,
+  schoolService,
+} from "./school.service";
 import type { CreateSchoolRequest } from "./school.interface";
 import { validateCreateSchoolInput } from "./school.validation";
 
@@ -49,9 +52,21 @@ const createSchool = async (req: AuthenticatedRequest, res: Response) => {
           : "School provisioning failed",
     });
   } catch (error) {
+    if (error instanceof DuplicateSchoolEmailError) {
+      res.status(409).json({
+        success: false,
+        message: "A school with this email already exists",
+        error: {
+          code: "DUPLICATE_SCHOOL_EMAIL",
+          field: "schoolEmail",
+        },
+      });
+      return;
+    }
+
     const message = error instanceof Error ? error.message : "School create failed";
 
-    res.status(409).json({
+    res.status(500).json({
       success: false,
       message,
     });
