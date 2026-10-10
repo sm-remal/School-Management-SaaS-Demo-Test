@@ -1,6 +1,7 @@
 import express from "express";
 import cors from "cors";
 import authRoutes from "./modules/auth/auth.route";
+import schoolRoutes from "./modules/school/school.route";
 
 const app = express();
 app.use(cors());
@@ -23,5 +24,6 @@ app.get("/health", (_req, res) => {
 });
 
 app.use("/api/v1/auth", authRoutes);
+app.use("/api/v1/schools", schoolRoutes);
 
 export default app;

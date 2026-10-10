@@ -1,8 +1,111 @@
 generator client {
-  provider = "prisma-client"
-  output   = "../generated/prisma"
+  provider = "prisma-client-js"
 }
 
 datasource db {
   provider = "postgresql"
+}
+
+enum PlatformUserStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum SchoolStatus {
+  PROVISIONING
+  ACTIVE
+  FAILED
+  SUSPENDED
+}
+
+enum TenantDatabaseStatus {
+  PENDING
+  CREATED
+  INITIALIZED
+  FAILED
+}
+
+model PlatformUser {
+  id           String             @id @default(uuid())
+  email        String             @unique
+  passwordHash String             @map("password_hash")
+  status       PlatformUserStatus @default(ACTIVE)
+  lastLoginAt  DateTime?          @map("last_login_at")
+  createdAt    DateTime           @default(now()) @map("created_at")
+  updatedAt    DateTime           @updatedAt @map("updated_at")
+
+  roles     PlatformUserRole[]
+  auditLogs AuditLog[]
+
+  @@map("platform_users")
+}
+
+model PlatformRole {
+  id        String   @id @default(uuid())
+  code      String   @unique
+  name      String
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  users PlatformUserRole[]
+
+  @@map("platform_roles")
+}
+
+model PlatformUserRole {
+  userId    String   @map("user_id")
+  roleId    String   @map("role_id")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user PlatformUser @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role PlatformRole @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@id([userId, roleId])
+  @@map("platform_user_roles")
+}
+
+model School {
+  id           String       @id @default(uuid())
+  schoolName   String       @map("school_name")
+  schoolEmail  String       @unique @map("school_email")
+  status       SchoolStatus @default(PROVISIONING)
+  errorMessage String?      @map("error_message")
+  createdAt    DateTime     @default(now()) @map("created_at")
+  updatedAt    DateTime     @updatedAt @map("updated_at")
+
+  tenantDatabase TenantDatabase?
+  auditLogs      AuditLog[]
+
+  @@map("schools")
+}
+
+model TenantDatabase {
+  id           String               @id @default(uuid())
+  schoolId     String               @unique @map("school_id")
+  databaseName String               @unique @map("database_name")
+  status       TenantDatabaseStatus @default(PENDING)
+  errorMessage String?              @map("error_message")
+  createdAt    DateTime             @default(now()) @map("created_at")
+  updatedAt    DateTime             @updatedAt @map("updated_at")
+
+  school School @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+
+  @@map("tenant_databases")
+}
+
+model AuditLog {
+  id          String   @id @default(uuid())
+  actorUserId String?  @map("actor_user_id")
+  schoolId    String?  @map("school_id")
+  action      String
+  metadata    Json?
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  actor PlatformUser? @relation(fields: [actorUserId], references: [id], onDelete: SetNull)
+  school School?      @relation(fields: [schoolId], references: [id], onDelete: SetNull)
+
+  @@index([actorUserId])
+  @@index([schoolId])
+  @@index([action])
+  @@map("audit_logs")
 }

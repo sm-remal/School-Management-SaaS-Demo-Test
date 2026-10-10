@@ -1,8 +1,11 @@
-import { authService } from "./auth.service";
-import { validateLoginInput } from "./auth.validation";
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.authController = void 0;
+const auth_service_1 = require("./auth.service");
+const auth_validation_1 = require("./auth.validation");
 const login = async (req, res) => {
     const payload = req.body;
-    const validation = validateLoginInput(payload);
+    const validation = (0, auth_validation_1.validateLoginInput)(payload);
     if (!validation.success) {
         res.status(400).json({
             success: false,
@@ -12,20 +15,20 @@ const login = async (req, res) => {
         return;
     }
     try {
-        const result = await authService.login(payload);
+        const result = await auth_service_1.authService.login(payload);
         res.json({
             success: true,
             data: result,
         });
     }
     catch (_error) {
-        res.status(501).json({
+        res.status(401).json({
             success: false,
-            message: "Auth login is not implemented yet",
+            message: "Invalid email or password",
         });
     }
 };
-export const authController = {
+exports.authController = {
     login,
 };
 //# sourceMappingURL=auth.controller.js.map

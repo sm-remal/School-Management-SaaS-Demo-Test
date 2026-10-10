@@ -24,9 +24,9 @@ const login = async (req: Request, res: Response) => {
       data: result,
     });
   } catch (_error) {
-    res.status(501).json({
+    res.status(401).json({
       success: false,
-      message: "Auth login is not implemented yet",
+      message: "Invalid email or password",
     });
   }
 };
