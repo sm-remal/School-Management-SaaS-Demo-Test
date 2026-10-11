@@ -833,9 +833,10 @@ export default function Home() {
                 </button>
                 <button
                   onClick={logout}
-                  className="h-10 w-full cursor-pointer rounded-md bg-red-500 px-4 text-sm font-medium text-white hover:bg-red-600"
+                  className="inline-flex h-10 w-full cursor-pointer items-center justify-center gap-2 rounded-md bg-red-500 px-4 text-sm font-medium text-white hover:bg-red-600"
                   type="button"
                 >
+                  <LogOut className="h-4 w-4" />
                   Logout
                 </button>
               </div>
@@ -868,9 +869,10 @@ export default function Home() {
                   </div>
                   <button
                     onClick={logout}
-                    className="h-10 rounded-md border border-slate-300 bg-white px-4 text-sm font-medium hover:bg-slate-50"
+                    className="inline-flex h-10 cursor-pointer items-center justify-center gap-2 rounded-md bg-red-500 px-4 text-sm font-medium text-white hover:bg-red-600"
                     type="button"
                   >
+                    <LogOut className="h-4 w-4" />
                     Logout
                   </button>
                 </div>
@@ -1144,7 +1146,7 @@ export default function Home() {
             </div>
             <button
               onClick={logout}
-              className="inline-flex h-10 items-center gap-2 rounded-md border border-slate-300 bg-white px-4 text-sm font-medium hover:bg-slate-50"
+              className="inline-flex h-10 cursor-pointer items-center gap-2 rounded-md bg-red-500 px-4 text-sm font-medium text-white hover:bg-red-600"
               type="button"
             >
               <LogOut className="h-4 w-4" />
