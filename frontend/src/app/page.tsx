@@ -2,6 +2,7 @@
 
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import Swal from "sweetalert2";
+import SchoolDashboardCharts from "../components/SchoolDashboardCharts";
 import SchoolLoginPanel from "../components/SchoolLoginPanel";
 import {
   BarChart3,
@@ -297,24 +298,32 @@ const schoolMetricCards = [
     value: "12",
     helper: "Total number of student",
     icon: Users,
+    surface: "border-blue-100 bg-blue-50/70",
+    iconStyle: "bg-blue-100 text-blue-700",
   },
   {
     label: "Teachers",
     value: "5",
     helper: "Total number of teacher",
     icon: GraduationCap,
+    surface: "border-emerald-100 bg-emerald-50/70",
+    iconStyle: "bg-emerald-100 text-emerald-700",
   },
   {
     label: "Parents",
     value: "7",
     helper: "Total number of parent",
     icon: UserCheck,
+    surface: "border-amber-100 bg-amber-50/70",
+    iconStyle: "bg-amber-100 text-amber-700",
   },
   {
     label: "Staff",
     value: "6",
     helper: "Total number of staff",
     icon: UserCog,
+    surface: "border-violet-100 bg-violet-50/70",
+    iconStyle: "bg-violet-100 text-violet-700",
   },
 ];
 
@@ -919,15 +928,15 @@ export default function Home() {
                     </div>
                   </div>
 
-                  <div className="grid gap-5 sm:grid-cols-2">
+                  <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
                     {schoolMetricCards.map((card) => {
                       const Icon = card.icon;
                       return (
                         <div
-                          className="rounded-lg border border-slate-200 bg-white p-6 shadow-sm"
+                          className={`rounded-lg border p-5 shadow-sm ${card.surface}`}
                           key={card.label}
                         >
-                          <div className="flex h-10 w-10 items-center justify-center rounded-md bg-blue-100 text-blue-700">
+                          <div className={`flex h-10 w-10 items-center justify-center rounded-md ${card.iconStyle}`}>
                             <Icon className="h-5 w-5" />
                           </div>
                           <p className="mt-4 text-sm font-semibold text-slate-500">
@@ -1005,6 +1014,8 @@ export default function Home() {
                       </div>
                     </div>
                   </div>
+
+                  <SchoolDashboardCharts />
                 </section>
 
                 <aside className="space-y-5">
