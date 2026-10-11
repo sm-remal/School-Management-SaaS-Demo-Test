@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { requireSchoolAuth } from "../../shared/schoolAuth.middleware";
+import { requireSchoolAuth } from "../../middleware/schoolAuth";
 import { schoolAdminController } from "./schoolAdmin.controller";
 
 const router = Router();

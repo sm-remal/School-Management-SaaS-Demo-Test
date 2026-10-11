@@ -1,5 +1,5 @@
 import type { Response } from "express";
-import type { SchoolAuthenticatedRequest } from "../../shared/schoolAuth.middleware";
+import type { SchoolAuthenticatedRequest } from "../../middleware/schoolAuth";
 import { schoolAdminService } from "./schoolAdmin.service";
 import { AppError } from "../../errors/AppError";
 

@@ -1,6 +1,6 @@
 # School Management SaaS Demo Context
 
-Last updated: 2026-10-10
+Last updated: 2026-10-11
 
 This file is the handoff note for continuing the demo project from another PC or another Codex session.
 
@@ -135,6 +135,8 @@ backend/src/config/index.ts
 backend/src/shared/prisma.ts
 backend/src/errors/AppError.ts
 backend/src/middleware/globalErrorHandler.ts
+backend/src/middleware/auth.ts
+backend/src/middleware/schoolAuth.ts
 ```
 
 Module file pattern:
@@ -151,19 +153,25 @@ Implemented modules:
 
 ```txt
 backend/src/modules/auth
+backend/src/modules/audit
 backend/src/modules/school
 backend/src/modules/school-auth
 backend/src/modules/school-admin
 ```
 
-Shared middleware:
+Middleware:
 
 ```txt
-backend/src/shared/auth.middleware.ts
-backend/src/shared/schoolAuth.middleware.ts
+backend/src/middleware/auth.ts
+backend/src/middleware/schoolAuth.ts
+backend/src/middleware/globalErrorHandler.ts
 ```
 
-There is also `backend/src/middleware/auth.ts`, currently empty, and `backend/src/middleware/globalErrorHandler.ts`, now implemented. Later cleanup should standardize middleware locations.
+Shared utilities:
+
+```txt
+backend/src/shared/prisma.ts
+```
 
 ## Database Work Done
 
@@ -294,6 +302,20 @@ Authorization: Bearer <school token>
 
 This endpoint proves the user can login through the school tenant DB and read profile/settings from that same tenant DB.
 
+Audit logs:
+
+```txt
+GET /api/v1/audit-logs
+```
+
+Requires:
+
+```txt
+Authorization: Bearer <platform token>
+```
+
+Returns the latest platform audit events with actor and school details.
+
 ## Frontend Work Done
 
 Main frontend file:
@@ -312,6 +334,9 @@ Implemented UI:
 - Create School form
 - School list table with tenant DB status
 - School Admin dashboard showing tenant-loaded profile/settings
+- School Admin dashboard polished with a sidebar-style admin UI and module groups
+- Platform dashboard showing latest audit logs
+- Login session persistence with localStorage for both Platform and School modes
 
 Layout metadata updated:
 
@@ -413,6 +438,8 @@ Manual smoke tests run:
 - Duplicate school email returns clean 409
 - Invalid login uses global error handler
 - Unknown route uses global error handler
+- Audit log API returns latest provisioning events
+- Frontend restores Platform and School sessions after page refresh
 
 ## Work Done So Far
 
@@ -437,55 +464,50 @@ Manual smoke tests run:
 10. Added School Admin tenant profile endpoint and dashboard.
 11. Polished duplicate school email handling.
 12. Added global error handler and `AppError`.
+13. Added audit log API and frontend audit panel.
+14. Cleaned up middleware locations: platform auth and school auth middleware now live under `backend/src/middleware`.
+15. Added frontend token persistence with localStorage and session restore.
+16. Polished created school dashboard UI:
+    - desktop left sidebar
+    - mobile quick navigation strip
+    - Dashboard, Academic, Exams, Finance & HR, Communication, No-Code Tools, Website, Marketplace, Administration groups
+    - summary cards for Students, Teachers, Parents, Staff
+    - academic/finance snapshots
+    - school settings, quick modules, and today tasks panels
+    - `lucide-react` installed for shadcn-style icons
 
 ## Remaining Work
 
 High-priority remaining items:
 
-1. **Middleware cleanup**
-   - There is `backend/src/shared/auth.middleware.ts`.
-   - There is also `backend/src/middleware/auth.ts`, currently empty.
-   - Decide one location and standardize.
-
-2. **Audit log API and UI**
-   - Audit rows are being created for provisioning start/completed/failed.
-   - Need endpoint to list audit logs.
-   - Need frontend panel/table to show audit events.
-
-3. **Provisioning failure UI**
+1. **Provisioning failure UI**
    - Failed status and error message exist.
    - UI can be improved with clearer failure reason and retry guidance.
 
-4. **Frontend token persistence**
-   - Current token is kept in React state only.
-   - Refresh loses login.
-   - For demo, localStorage is acceptable.
-   - For production, use secure HttpOnly cookie/session strategy.
-
-5. **Acceptance test script**
+2. **Acceptance test script**
    - README has TC-01 to TC-08.
    - Add automated smoke test or documented manual checklist.
 
-6. **Security polish**
+3. **Security polish**
    - Move `JWT_SECRET`, `SUPER_ADMIN_EMAIL`, `SUPER_ADMIN_PASSWORD` into `.env`.
    - Remove unsafe fallback defaults before any production-like usage.
    - Review npm audit output: install reported 4 high severity vulnerabilities.
 
-7. **API response consistency**
+4. **API response consistency**
    - Most responses use `{ success, data, message, error }`.
    - Can standardize all controllers fully.
 
-8. **Tenant database lifecycle cleanup**
+5. **Tenant database lifecycle cleanup**
    - If tenant DB initialization fails after database creation, failed DB remains.
    - For demo this is acceptable.
    - Later add retry/delete/manual cleanup strategy.
 
-9. **Connection pooling**
+6. **Connection pooling**
    - Tenant profile/login opens a new `pg.Pool` per request.
    - For demo this is OK.
    - Later add bounded tenant connection manager/cache.
 
-10. **README encoding**
+7. **README encoding**
    - `README.md` displays mojibake in terminal output.
    - Content appears Bengali but encoding/rendering is not clean.
    - Consider rewriting README as UTF-8 clean Markdown later.
@@ -495,26 +517,22 @@ High-priority remaining items:
 Recommended next task:
 
 ```txt
-Audit log API and frontend audit panel
+Provisioning failure UI
 ```
 
-Reason: README explicitly includes Basic Audit Log, and backend already writes audit rows. This is a natural next demo-completeness step.
+Reason: failed status exists, but the UI can show clearer recovery guidance.
 
 Implementation plan:
 
-1. Add `audit` module:
-   - `audit.controller.ts`
-   - `audit.interface.ts`
-   - `audit.route.ts`
-   - `audit.service.ts`
-2. Add `GET /api/v1/audit-logs`.
-3. Protect it with Platform Super Admin auth.
-4. Show latest audit logs in frontend Platform dashboard.
+1. Improve failed school row display.
+2. Show a clearer failed provisioning panel with error message and next action.
+3. Add a small guidance text that failed tenants are not active and may need manual cleanup/retry.
+4. Keep destructive retry/delete out of scope unless explicitly requested.
 
 Alternative next task:
 
 ```txt
-Middleware cleanup
+Acceptance test script
 ```
 
-Reason: reduces confusion before the codebase grows.
+Reason: README has acceptance cases TC-01 to TC-08, and a scripted smoke test would make demo verification faster.

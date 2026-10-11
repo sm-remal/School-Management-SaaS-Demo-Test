@@ -4,6 +4,7 @@ import authRoutes from "./modules/auth/auth.route";
 import schoolRoutes from "./modules/school/school.route";
 import schoolAuthRoutes from "./modules/school-auth/schoolAuth.route";
 import schoolAdminRoutes from "./modules/school-admin/schoolAdmin.route";
+import auditRoutes from "./modules/audit/audit.route";
 import { globalErrorHandler } from "./middleware/globalErrorHandler";
 import { AppError } from "./errors/AppError";
 
@@ -31,6 +32,7 @@ app.use("/api/v1/auth", authRoutes);
 app.use("/api/v1/school-auth", schoolAuthRoutes);
 app.use("/api/v1/school-admin", schoolAdminRoutes);
 app.use("/api/v1/schools", schoolRoutes);
+app.use("/api/v1/audit-logs", auditRoutes);
 
 app.use((_req, _res, next) => {
   next(new AppError(404, "Route not found", "ROUTE_NOT_FOUND"));

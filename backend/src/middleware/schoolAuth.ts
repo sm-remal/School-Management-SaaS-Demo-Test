@@ -29,9 +29,7 @@ export const requireSchoolAuth = (
 
   try {
     const decoded = jwt.verify(token, config.jwtSecret) as
-      | Partial<
-      SchoolAuthenticatedRequest["schoolUser"]
-    >
+      | Partial<SchoolAuthenticatedRequest["schoolUser"]>
       | undefined;
 
     if (
@@ -52,7 +50,9 @@ export const requireSchoolAuth = (
     req.schoolUser = {
       userId: decoded.userId,
       email: decoded.email,
-      roles: decoded.roles.filter((role): role is string => typeof role === "string"),
+      roles: decoded.roles.filter(
+        (role): role is string => typeof role === "string",
+      ),
       schoolId: decoded.schoolId,
       databaseName: decoded.databaseName,
     };

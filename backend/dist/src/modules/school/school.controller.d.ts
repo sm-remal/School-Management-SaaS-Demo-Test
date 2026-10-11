@@ -1,5 +1,5 @@
 import type { Response } from "express";
-import type { AuthenticatedRequest } from "../../shared/auth.middleware";
+import type { AuthenticatedRequest } from "../../middleware/auth";
 declare const listSchools: (_req: AuthenticatedRequest, res: Response) => Promise<void>;
 declare const createSchool: (req: AuthenticatedRequest, res: Response) => Promise<void>;
 export declare const schoolController: {
