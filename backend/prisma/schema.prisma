@@ -16,6 +16,7 @@ enum SchoolStatus {
   ACTIVE
   FAILED
   SUSPENDED
+  ARCHIVED
 }
 
 enum TenantDatabaseStatus {

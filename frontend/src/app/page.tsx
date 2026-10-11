@@ -1,9 +1,12 @@
 "use client";
 
 import { FormEvent, useEffect, useMemo, useState } from "react";
+import Swal from "sweetalert2";
 import {
   BarChart3,
   Archive,
+  Activity,
+  AlertTriangle,
   Bell,
   BookOpen,
   Briefcase,
@@ -14,6 +17,10 @@ import {
   ChevronDown,
   CirclePlay,
   ClipboardCheck,
+  CheckCircle2,
+  Database,
+  Eye,
+  EyeOff,
   FileBadge,
   FileCheck2,
   FileText,
@@ -24,9 +31,13 @@ import {
   LayoutDashboard,
   Library,
   LucideIcon,
+  LogOut,
   Package,
   PanelLeft,
+  Plus,
+  Power,
   Receipt,
+  RefreshCw,
   Settings,
   ShieldCheck,
   UserCheck,
@@ -34,6 +45,7 @@ import {
   Users,
   Video,
   WalletCards,
+  Trash2,
 } from "lucide-react";
 
 interface AuthUser {
@@ -101,6 +113,7 @@ const apiBaseUrl =
   "http://localhost:5000";
 
 const sessionStorageKey = "school-management-demo-session";
+const auditLogsPerPage = 10;
 
 type SidebarItem = {
   label: string;
@@ -345,6 +358,12 @@ export default function Home() {
   const [isLoading, setIsLoading] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
   const [openSidebarGroup, setOpenSidebarGroup] = useState<string | null>(null);
+  const [mutatingSchoolId, setMutatingSchoolId] = useState<string | null>(null);
+  const [deletingSchool, setDeletingSchool] = useState<School | null>(null);
+  const [deleteConfirmation, setDeleteConfirmation] = useState("");
+  const [showInitialAdminPassword, setShowInitialAdminPassword] =
+    useState(false);
+  const [auditLogPage, setAuditLogPage] = useState(1);
 
   const activeSchools = useMemo(
     () => schools.filter((school) => school.status === "ACTIVE").length,
@@ -355,6 +374,16 @@ export default function Home() {
     () => schools.filter((school) => school.status === "FAILED").length,
     [schools],
   );
+
+  const auditLogPageCount = Math.max(
+    1,
+    Math.ceil(auditLogs.length / auditLogsPerPage),
+  );
+  const currentAuditLogPage = Math.min(auditLogPage, auditLogPageCount);
+  const paginatedAuditLogs = useMemo(() => {
+    const startIndex = (currentAuditLogPage - 1) * auditLogsPerPage;
+    return auditLogs.slice(startIndex, startIndex + auditLogsPerPage);
+  }, [currentAuditLogPage, auditLogs]);
 
   const fetchSchools = async (accessToken = token) => {
     if (!accessToken) {
@@ -598,6 +627,13 @@ export default function Home() {
       setInitialAdminPassword("School@12345");
       await fetchSchools();
       await fetchAuditLogs();
+      await Swal.fire({
+        title: "School created!",
+        text: `${result.data.schoolName} is active and the tenant database ${result.data.tenantDatabase?.databaseName || "has been created"} is ready.`,
+        icon: "success",
+        draggable: true,
+        confirmButtonText: "Great",
+      });
       setMessage("School created and activated successfully");
     } catch (error) {
       setMessage(
@@ -607,6 +643,77 @@ export default function Home() {
       await fetchAuditLogs().catch(() => undefined);
     } finally {
       setIsCreating(false);
+    }
+  };
+
+  const handleSchoolLifecycleAction = async (
+    schoolId: string,
+    action: "activate" | "deactivate",
+  ) => {
+    setMutatingSchoolId(schoolId);
+    setMessage("");
+
+    try {
+      const response = await fetch(
+        `${apiBaseUrl}/api/v1/schools/${schoolId}/${action}`,
+        {
+          method: "PATCH",
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        },
+      );
+      const result = await response.json();
+
+      if (!response.ok || !result.success) {
+        throw new Error(result.message || "School update failed");
+      }
+
+      await fetchSchools();
+      await fetchAuditLogs();
+      setMessage(result.message || "School updated successfully");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "School update failed");
+    } finally {
+      setMutatingSchoolId(null);
+    }
+  };
+
+  const handlePermanentDeleteSchool = async () => {
+    if (!deletingSchool) {
+      return;
+    }
+
+    setMutatingSchoolId(deletingSchool.id);
+    setMessage("");
+
+    try {
+      const response = await fetch(
+        `${apiBaseUrl}/api/v1/schools/${deletingSchool.id}`,
+        {
+          method: "DELETE",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ schoolName: deleteConfirmation }),
+        },
+      );
+      const result = await response.json();
+
+      if (!response.ok || !result.success) {
+        throw new Error(result.message || "School delete failed");
+      }
+
+      setDeletingSchool(null);
+      setDeleteConfirmation("");
+      await fetchSchools();
+      await fetchAuditLogs();
+      setMessage(result.message || "School permanently deleted successfully");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "School delete failed");
+    } finally {
+      setMutatingSchoolId(null);
     }
   };
 
@@ -1086,208 +1193,368 @@ export default function Home() {
   }
 
   return (
-    <main className="min-h-screen bg-neutral-100 text-neutral-950">
-      <header className="border-b border-neutral-200 bg-white">
-        <div className="mx-auto flex w-full max-w-6xl flex-col gap-4 px-4 py-5 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <p className="text-sm font-medium text-teal-700">
-              Platform Super Admin
-            </p>
-            <h1 className="mt-1 text-2xl font-semibold tracking-tight">
-              School Provisioning Dashboard
-            </h1>
-          </div>
+    <main className="min-h-screen bg-slate-50 text-slate-950">
+      <header className="border-b border-slate-200 bg-white">
+        <div className="flex w-full flex-col gap-4 px-4 py-5 sm:flex-row sm:items-center sm:justify-between lg:px-8">
           <div className="flex items-center gap-3">
-            <span className="text-sm text-neutral-600">{user.email}</span>
+            <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-slate-900 text-white">
+              <ShieldCheck className="h-5 w-5" />
+            </div>
+            <div>
+              <p className="text-sm font-medium text-blue-700">
+                Platform Super Admin
+              </p>
+              <h1 className="mt-1 text-2xl font-semibold tracking-tight">
+                School Provisioning Dashboard
+              </h1>
+            </div>
+          </div>
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
+              <p className="text-xs text-slate-500">Signed in</p>
+              <p className="text-sm font-medium">{user.email}</p>
+            </div>
             <button
               onClick={logout}
-              className="h-10 rounded-md border border-neutral-300 bg-white px-4 text-sm font-medium hover:bg-neutral-50"
+              className="inline-flex h-10 items-center gap-2 rounded-md border border-slate-300 bg-white px-4 text-sm font-medium hover:bg-slate-50"
               type="button"
             >
+              <LogOut className="h-4 w-4" />
               Logout
             </button>
           </div>
         </div>
       </header>
 
-      <section className="mx-auto grid w-full max-w-6xl gap-5 px-4 py-6 lg:grid-cols-[360px_1fr]">
-        <aside className="space-y-5">
-          <div className="grid grid-cols-3 gap-3">
-            <div className="rounded-lg border border-neutral-200 bg-white p-4">
-              <p className="text-xs font-medium uppercase text-neutral-500">
-                Total
-              </p>
-              <p className="mt-2 text-2xl font-semibold">{schools.length}</p>
-            </div>
-            <div className="rounded-lg border border-neutral-200 bg-white p-4">
-              <p className="text-xs font-medium uppercase text-neutral-500">
-                Active
-              </p>
-              <p className="mt-2 text-2xl font-semibold text-teal-700">
-                {activeSchools}
-              </p>
-            </div>
-            <div className="rounded-lg border border-neutral-200 bg-white p-4">
-              <p className="text-xs font-medium uppercase text-neutral-500">
-                Failed
-              </p>
-              <p className="mt-2 text-2xl font-semibold text-red-700">
-                {failedSchools}
-              </p>
-            </div>
-          </div>
+      <section className="w-full space-y-5 px-4 py-6 lg:px-8">
+        <div className="grid gap-4 md:grid-cols-3">
+          {[
+            {
+              label: "Total Schools",
+              value: schools.length,
+              helper: "Registered tenants",
+              icon: Building2,
+              color: "bg-blue-50 text-blue-700",
+            },
+            {
+              label: "Active",
+              value: activeSchools,
+              helper: "Ready for school login",
+              icon: CheckCircle2,
+              color: "bg-emerald-50 text-emerald-700",
+            },
+            {
+              label: "Failed",
+              value: failedSchools,
+              helper: "Need review or retry",
+              icon: AlertTriangle,
+              color: "bg-red-50 text-red-700",
+            },
+          ].map((metric) => {
+            const Icon = metric.icon;
+            return (
+              <div
+                className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm"
+                key={metric.label}
+              >
+                <div className="flex items-center justify-between gap-4">
+                  <div>
+                    <p className="text-sm font-medium text-slate-500">
+                      {metric.label}
+                    </p>
+                    <p className="mt-3 text-3xl font-semibold tracking-tight">
+                      {metric.value}
+                    </p>
+                  </div>
+                  <div
+                    className={`flex h-11 w-11 items-center justify-center rounded-lg ${metric.color}`}
+                  >
+                    <Icon className="h-5 w-5" />
+                  </div>
+                </div>
+                <p className="mt-4 text-sm text-slate-500">{metric.helper}</p>
+              </div>
+            );
+          })}
+        </div>
 
-          <form
-            onSubmit={handleCreateSchool}
-            className="rounded-lg border border-neutral-200 bg-white p-5 shadow-sm"
-          >
-            <h2 className="text-lg font-semibold">Create School</h2>
-            <label className="mt-5 block text-sm font-medium text-neutral-700">
-              School Name
-              <input
-                value={schoolName}
-                onChange={(event) => setSchoolName(event.target.value)}
-                className="mt-2 h-11 w-full rounded-md border border-neutral-300 px-3 text-sm outline-none focus:border-teal-700"
-                required
-              />
-            </label>
-            <label className="mt-4 block text-sm font-medium text-neutral-700">
-              School Email
-              <input
-                value={schoolEmail}
-                onChange={(event) => setSchoolEmail(event.target.value)}
-                className="mt-2 h-11 w-full rounded-md border border-neutral-300 px-3 text-sm outline-none focus:border-teal-700"
-                type="email"
-                required
-              />
-            </label>
-            <label className="mt-4 block text-sm font-medium text-neutral-700">
-              Initial Admin Password
-              <input
-                value={initialAdminPassword}
-                onChange={(event) =>
-                  setInitialAdminPassword(event.target.value)
-                }
-                className="mt-2 h-11 w-full rounded-md border border-neutral-300 px-3 text-sm outline-none focus:border-teal-700"
-                minLength={8}
-                type="password"
-                required
-              />
-            </label>
-            <button
-              className="mt-5 h-11 w-full rounded-md bg-teal-700 px-4 text-sm font-semibold text-white hover:bg-teal-800 disabled:cursor-not-allowed disabled:bg-neutral-400"
-              disabled={isCreating}
-              type="submit"
+        <div className="grid gap-5 xl:grid-cols-[380px_1fr]">
+          <aside className="space-y-5">
+            <form
+              onSubmit={handleCreateSchool}
+              className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm"
             >
-              {isCreating ? "Provisioning..." : "Create and Provision"}
-            </button>
-            {message ? (
-              <p className="mt-4 text-sm text-neutral-700">{message}</p>
-            ) : null}
-          </form>
-        </aside>
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-md bg-blue-50 text-blue-700">
+                  <Plus className="h-5 w-5" />
+                </div>
+                <div>
+                  <h2 className="text-lg font-semibold">Create School</h2>
+                  <p className="mt-1 text-sm text-slate-500">
+                    Provision a tenant database and initial admin.
+                  </p>
+                </div>
+              </div>
+              <label className="mt-5 block text-sm font-medium text-slate-700">
+                School Name
+                <input
+                  value={schoolName}
+                  onChange={(event) => setSchoolName(event.target.value)}
+                  className="mt-2 h-11 w-full rounded-md border border-slate-300 bg-white px-3 text-sm outline-none transition focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+                  placeholder="ABC School"
+                  required
+                />
+              </label>
+              <label className="mt-4 block text-sm font-medium text-slate-700">
+                School Email
+                <input
+                  value={schoolEmail}
+                  onChange={(event) => setSchoolEmail(event.target.value)}
+                  className="mt-2 h-11 w-full rounded-md border border-slate-300 bg-white px-3 text-sm outline-none transition focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+                  placeholder="admin@school.edu"
+                  type="email"
+                  required
+                />
+              </label>
+              <label className="mt-4 block text-sm font-medium text-slate-700">
+                Initial Admin Password
+                <span className="relative mt-2 block">
+                  <input
+                    value={initialAdminPassword}
+                    onChange={(event) =>
+                      setInitialAdminPassword(event.target.value)
+                    }
+                    className="h-11 w-full rounded-md border border-slate-300 bg-white px-3 pr-11 text-sm outline-none transition focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+                    minLength={8}
+                    type={showInitialAdminPassword ? "text" : "password"}
+                    required
+                  />
+                  <button
+                    aria-label={
+                      showInitialAdminPassword
+                        ? "Hide initial admin password"
+                        : "Show initial admin password"
+                    }
+                    className="absolute right-2 top-1/2 flex h-8 w-8 -translate-y-1/2 cursor-pointer items-center justify-center rounded-md text-slate-500 hover:bg-slate-100 hover:text-slate-700"
+                    onClick={() =>
+                      setShowInitialAdminPassword((current) => !current)
+                    }
+                    type="button"
+                  >
+                    {showInitialAdminPassword ? (
+                      <EyeOff className="h-4 w-4" />
+                    ) : (
+                      <Eye className="h-4 w-4" />
+                    )}
+                  </button>
+                </span>
+              </label>
+              <button
+                className="mt-5 inline-flex h-11 w-full cursor-pointer items-center justify-center gap-2 rounded-md bg-blue-700 px-4 text-sm font-semibold text-white transition hover:bg-blue-800 disabled:cursor-not-allowed disabled:bg-slate-400"
+                disabled={isCreating}
+                type="submit"
+              >
+                <Plus className="h-4 w-4" />
+                {isCreating ? "Provisioning..." : "Create and Provision"}
+              </button>
+              {message ? (
+                <p className="mt-4 rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700">
+                  {message}
+                </p>
+              ) : null}
+            </form>
 
-        <section className="rounded-lg border border-neutral-200 bg-white shadow-sm">
-          <div className="flex flex-col gap-3 border-b border-neutral-200 p-5 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <h2 className="text-lg font-semibold">Schools</h2>
-              <p className="mt-1 text-sm text-neutral-600">
-                Central registry records with tenant database status.
-              </p>
+            <div className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
+              <div className="flex items-center gap-2">
+                <Activity className="h-5 w-5 text-blue-700" />
+                <h2 className="font-semibold">Control Plane</h2>
+              </div>
+              <div className="mt-5 space-y-3">
+                {[
+                  ["Auth", "JWT protected"],
+                  ["Provisioning", "Database per school"],
+                  ["Audit", `${auditLogs.length} events loaded`],
+                ].map(([label, value]) => (
+                  <div
+                    className="flex items-center justify-between rounded-md bg-slate-50 px-3 py-2"
+                    key={label}
+                  >
+                    <span className="text-sm text-slate-500">{label}</span>
+                    <span className="text-sm font-medium text-slate-700">
+                      {value}
+                    </span>
+                  </div>
+                ))}
+              </div>
             </div>
-            <button
-              onClick={() => {
-                fetchSchools().catch((error) => setMessage(error.message));
-                fetchAuditLogs().catch((error) => setMessage(error.message));
-              }}
-              className="h-10 rounded-md border border-neutral-300 bg-white px-4 text-sm font-medium hover:bg-neutral-50"
-              type="button"
-            >
-              Refresh
-            </button>
-          </div>
+          </aside>
 
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[760px] border-collapse text-left text-sm">
-              <thead>
-                <tr className="border-b border-neutral-200 bg-neutral-50 text-neutral-600">
-                  <th className="px-5 py-3 font-medium">School</th>
-                  <th className="px-5 py-3 font-medium">Status</th>
-                  <th className="px-5 py-3 font-medium">Database</th>
-                  <th className="px-5 py-3 font-medium">Created</th>
-                </tr>
-              </thead>
-              <tbody>
-                {schools.length === 0 ? (
-                  <tr>
-                    <td
-                      className="px-5 py-10 text-center text-neutral-500"
-                      colSpan={4}
-                    >
-                      No schools yet.
-                    </td>
+          <section className="rounded-lg border border-slate-200 bg-white shadow-sm">
+            <div className="flex flex-col gap-3 border-b border-slate-200 p-5 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-md bg-slate-100 text-slate-700">
+                  <Database className="h-5 w-5" />
+                </div>
+                <div>
+                  <h2 className="text-lg font-semibold">Schools</h2>
+                  <p className="mt-1 text-sm text-slate-500">
+                    Central registry records with tenant database status.
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => {
+                  fetchSchools().catch((error) => setMessage(error.message));
+                  fetchAuditLogs().catch((error) => setMessage(error.message));
+                }}
+                className="inline-flex h-10 cursor-pointer items-center justify-center gap-2 rounded-md border border-slate-300 bg-white px-4 text-sm font-medium hover:bg-slate-50"
+                type="button"
+              >
+                <RefreshCw className="h-4 w-4" />
+                Refresh
+              </button>
+            </div>
+
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[980px] border-collapse text-left text-sm">
+                <thead>
+                  <tr className="border-b border-slate-200 bg-slate-50 text-slate-500">
+                    <th className="px-5 py-3 font-medium">School</th>
+                    <th className="px-5 py-3 font-medium">Status</th>
+                    <th className="px-5 py-3 font-medium">Database</th>
+                    <th className="px-5 py-3 font-medium">Created</th>
+                    <th className="px-5 py-3 font-medium">Actions</th>
                   </tr>
-                ) : (
-                  schools.map((school) => (
-                    <tr
-                      className="border-b border-neutral-100 last:border-0"
-                      key={school.id}
-                    >
-                      <td className="px-5 py-4">
-                        <p className="font-medium">{school.schoolName}</p>
-                        <p className="mt-1 text-neutral-500">
-                          {school.schoolEmail}
-                        </p>
-                      </td>
-                      <td className="px-5 py-4">
-                        <span
-                          className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${
-                            school.status === "ACTIVE"
-                              ? "bg-teal-50 text-teal-700"
-                              : school.status === "FAILED"
-                                ? "bg-red-50 text-red-700"
-                                : "bg-amber-50 text-amber-700"
-                          }`}
-                        >
-                          {school.status}
-                        </span>
-                        {school.errorMessage ? (
-                          <p className="mt-2 max-w-xs text-xs text-red-700">
-                            {school.errorMessage}
-                          </p>
-                        ) : null}
-                      </td>
-                      <td className="px-5 py-4">
-                        <p className="font-mono text-xs">
-                          {school.tenantDatabase?.databaseName || "-"}
-                        </p>
-                        <p className="mt-1 text-xs text-neutral-500">
-                          {school.tenantDatabase?.status || "-"}
-                        </p>
-                      </td>
-                      <td className="px-5 py-4 text-neutral-600">
-                        {new Date(school.createdAt).toLocaleString()}
+                </thead>
+                <tbody>
+                  {schools.length === 0 ? (
+                    <tr>
+                      <td
+                        className="px-5 py-12 text-center text-slate-500"
+                        colSpan={5}
+                      >
+                        No schools yet.
                       </td>
                     </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
-        </section>
+                  ) : (
+                    schools.map((school) => (
+                      <tr
+                        className="border-b border-slate-100 last:border-0 hover:bg-slate-50"
+                        key={school.id}
+                      >
+                        <td className="px-5 py-4">
+                          <p className="font-medium text-slate-900">
+                            {school.schoolName}
+                          </p>
+                          <p className="mt-1 text-slate-500">
+                            {school.schoolEmail}
+                          </p>
+                        </td>
+                        <td className="px-5 py-4">
+                          <span
+                            className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${
+                              school.status === "ACTIVE"
+                                ? "bg-emerald-50 text-emerald-700"
+                                : school.status === "FAILED"
+                                  ? "bg-red-50 text-red-700"
+                                  : "bg-amber-50 text-amber-700"
+                            }`}
+                          >
+                            {school.status}
+                          </span>
+                          {school.errorMessage ? (
+                            <p className="mt-2 max-w-xs text-xs text-red-700">
+                              {school.errorMessage}
+                            </p>
+                          ) : null}
+                        </td>
+                        <td className="px-5 py-4">
+                          <p className="break-all font-mono text-xs text-slate-700">
+                            {school.tenantDatabase?.databaseName || "-"}
+                          </p>
+                          <p className="mt-1 text-xs text-slate-500">
+                            {school.tenantDatabase?.status || "-"}
+                          </p>
+                        </td>
+                        <td className="px-5 py-4 text-slate-600">
+                          {new Date(school.createdAt).toLocaleString()}
+                        </td>
+                        <td className="px-5 py-4">
+                          <div className="flex flex-wrap gap-2">
+                            {school.status === "ACTIVE" ? (
+                              <button
+                                className="inline-flex h-9 cursor-pointer items-center gap-1 rounded-md border border-amber-200 bg-amber-50 px-3 text-xs font-medium text-amber-700 hover:bg-amber-100 disabled:cursor-not-allowed disabled:opacity-60"
+                                disabled={mutatingSchoolId === school.id}
+                                onClick={() =>
+                                  handleSchoolLifecycleAction(
+                                    school.id,
+                                    "deactivate",
+                                  )
+                                }
+                                type="button"
+                              >
+                                <Power className="h-3.5 w-3.5" />
+                                Deactivate
+                              </button>
+                            ) : (
+                              <button
+                                className="inline-flex h-9 cursor-pointer items-center gap-1 rounded-md border border-emerald-200 bg-emerald-50 px-3 text-xs font-medium text-emerald-700 hover:bg-emerald-100 disabled:cursor-not-allowed disabled:opacity-60"
+                                disabled={mutatingSchoolId === school.id}
+                                onClick={() =>
+                                  handleSchoolLifecycleAction(
+                                    school.id,
+                                    "activate",
+                                  )
+                                }
+                                type="button"
+                              >
+                                <CheckCircle2 className="h-3.5 w-3.5" />
+                                Activate
+                              </button>
+                            )}
+                            <button
+                              className="inline-flex h-9 cursor-pointer items-center gap-1 rounded-md border border-red-200 bg-red-50 px-3 text-xs font-medium text-red-700 hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-60"
+                              disabled={mutatingSchoolId === school.id}
+                              onClick={() => {
+                                setDeletingSchool(school);
+                                setDeleteConfirmation("");
+                              }}
+                              type="button"
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                              Delete
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </section>
+        </div>
 
-        <section className="rounded-lg border border-neutral-200 bg-white shadow-sm lg:col-span-2">
-          <div className="border-b border-neutral-200 p-5">
-            <h2 className="text-lg font-semibold">Audit Logs</h2>
-            <p className="mt-1 text-sm text-neutral-600">
-              Latest platform events for school provisioning and lifecycle
-              changes.
-            </p>
+        <section className="rounded-lg border border-slate-200 bg-white shadow-sm">
+          <div className="border-b border-slate-200 p-5">
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-md bg-slate-100 text-slate-700">
+                <FileText className="h-5 w-5" />
+              </div>
+              <div>
+                <h2 className="text-lg font-semibold">Audit Logs</h2>
+                <p className="mt-1 text-sm text-slate-500">
+                  Latest platform events for school provisioning and lifecycle
+                  changes.
+                </p>
+              </div>
+            </div>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full min-w-[860px] border-collapse text-left text-sm">
               <thead>
-                <tr className="border-b border-neutral-200 bg-neutral-50 text-neutral-600">
+                <tr className="border-b border-slate-200 bg-slate-50 text-slate-500">
+                  <th className="w-20 px-5 py-3 font-medium">SL</th>
                   <th className="px-5 py-3 font-medium">Action</th>
                   <th className="px-5 py-3 font-medium">School</th>
                   <th className="px-5 py-3 font-medium">Actor</th>
@@ -1298,40 +1565,45 @@ export default function Home() {
                 {auditLogs.length === 0 ? (
                   <tr>
                     <td
-                      className="px-5 py-10 text-center text-neutral-500"
-                      colSpan={4}
+                      className="px-5 py-12 text-center text-slate-500"
+                      colSpan={5}
                     >
                       No audit events yet.
                     </td>
                   </tr>
                 ) : (
-                  auditLogs.map((log) => (
+                  paginatedAuditLogs.map((log, index) => (
                     <tr
-                      className="border-b border-neutral-100 last:border-0"
+                      className="border-b border-slate-100 last:border-0 hover:bg-slate-50"
                       key={log.id}
                     >
+                      <td className="px-5 py-4 font-medium text-slate-500">
+                        {(currentAuditLogPage - 1) * auditLogsPerPage +
+                          index +
+                          1}
+                      </td>
                       <td className="px-5 py-4">
-                        <p className="font-mono text-xs font-semibold">
+                        <p className="font-mono text-xs font-semibold text-slate-800">
                           {log.action}
                         </p>
                         {log.metadata?.databaseName ? (
-                          <p className="mt-1 break-all font-mono text-xs text-neutral-500">
+                          <p className="mt-1 break-all font-mono text-xs text-slate-500">
                             {String(log.metadata.databaseName)}
                           </p>
                         ) : null}
                       </td>
                       <td className="px-5 py-4">
-                        <p className="font-medium">
+                        <p className="font-medium text-slate-900">
                           {log.school?.schoolName || "-"}
                         </p>
-                        <p className="mt-1 text-neutral-500">
+                        <p className="mt-1 text-slate-500">
                           {log.school?.schoolEmail || "-"}
                         </p>
                       </td>
-                      <td className="px-5 py-4 text-neutral-600">
+                      <td className="px-5 py-4 text-slate-600">
                         {log.actor?.email || "System"}
                       </td>
-                      <td className="px-5 py-4 text-neutral-600">
+                      <td className="px-5 py-4 text-slate-600">
                         {new Date(log.createdAt).toLocaleString()}
                       </td>
                     </tr>
@@ -1340,8 +1612,119 @@ export default function Home() {
               </tbody>
             </table>
           </div>
+          <div className="flex flex-col gap-3 border-t border-slate-200 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+            <p className="text-sm text-slate-500">
+              Showing{" "}
+              <span className="font-medium text-slate-700">
+                {auditLogs.length === 0
+                  ? 0
+                  : (currentAuditLogPage - 1) * auditLogsPerPage + 1}
+              </span>{" "}
+              to{" "}
+              <span className="font-medium text-slate-700">
+                {Math.min(
+                  currentAuditLogPage * auditLogsPerPage,
+                  auditLogs.length,
+                )}
+              </span>{" "}
+              of{" "}
+              <span className="font-medium text-slate-700">
+                {auditLogs.length}
+              </span>{" "}
+              logs
+            </p>
+            <div className="flex items-center gap-2">
+              <button
+                className="h-9 cursor-pointer rounded-md border border-slate-300 bg-white px-3 text-sm font-medium hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+                disabled={currentAuditLogPage === 1}
+                onClick={() =>
+                  setAuditLogPage((currentPage) => Math.max(1, currentPage - 1))
+                }
+                type="button"
+              >
+                Previous
+              </button>
+              <span className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-600">
+                Page {currentAuditLogPage} of {auditLogPageCount}
+              </span>
+              <button
+                className="h-9 cursor-pointer rounded-md border border-slate-300 bg-white px-3 text-sm font-medium hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+                disabled={currentAuditLogPage === auditLogPageCount}
+                onClick={() =>
+                  setAuditLogPage((currentPage) =>
+                    Math.min(auditLogPageCount, currentPage + 1),
+                  )
+                }
+                type="button"
+              >
+                Next
+              </button>
+            </div>
+          </div>
         </section>
       </section>
+
+      {deletingSchool ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 px-4">
+          <div className="w-full max-w-md rounded-lg border border-red-200 bg-white p-5 shadow-xl">
+            <div className="flex items-start gap-3">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-red-50 text-red-700">
+                <Trash2 className="h-5 w-5" />
+              </div>
+              <div>
+                <h2 className="text-lg font-semibold text-slate-950">
+                  Permanently delete school
+                </h2>
+                <p className="mt-2 text-sm leading-6 text-slate-600">
+                  This will delete the central school record and drop the tenant
+                  database. Export a backup before continuing.
+                </p>
+              </div>
+            </div>
+
+            <div className="mt-5 rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+              Type{" "}
+              <span className="font-semibold">{deletingSchool.schoolName}</span>{" "}
+              to confirm permanent deletion.
+            </div>
+
+            <label className="mt-4 block text-sm font-medium text-slate-700">
+              School name confirmation
+              <input
+                value={deleteConfirmation}
+                onChange={(event) => setDeleteConfirmation(event.target.value)}
+                className="mt-2 h-11 w-full rounded-md border border-slate-300 px-3 text-sm outline-none transition focus:border-red-600 focus:ring-2 focus:ring-red-100"
+                placeholder={deletingSchool.schoolName}
+              />
+            </label>
+
+            <div className="mt-5 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+              <button
+                className="h-10 cursor-pointer rounded-md border border-slate-300 bg-white px-4 text-sm font-medium hover:bg-slate-50"
+                onClick={() => {
+                  setDeletingSchool(null);
+                  setDeleteConfirmation("");
+                }}
+                type="button"
+              >
+                Cancel
+              </button>
+              <button
+                className="inline-flex h-10 cursor-pointer items-center justify-center gap-2 rounded-md bg-red-700 px-4 text-sm font-semibold text-white hover:bg-red-800 disabled:cursor-not-allowed disabled:bg-slate-400"
+                disabled={
+                  deleteConfirmation.trim() !== deletingSchool.schoolName ||
+                  mutatingSchoolId === deletingSchool.id
+                }
+                onClick={handlePermanentDeleteSchool}
+                type="button"
+              >
+                <Trash2 className="h-4 w-4" />
+                Permanently delete
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </main>
   );
 }

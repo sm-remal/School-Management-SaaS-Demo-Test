@@ -475,6 +475,11 @@ Manual smoke tests run:
     - academic/finance snapshots
     - school settings, quick modules, and today tasks panels
     - `lucide-react` installed for shadcn-style icons
+17. Added safe school lifecycle controls for Platform Super Admin:
+    - deactivate uses `SUSPENDED` and blocks school login
+    - activate restores a school to `ACTIVE`
+    - permanent delete requires typing the exact school name and drops the tenant database before deleting the central record
+    - archive UI/API was later removed by request; migration `20261011085000_add_archived_school_status` remains applied in DB history
 
 ## Remaining Work
 

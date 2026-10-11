@@ -27,6 +27,47 @@ const quoteIdentifier = (identifier: string) => {
   return `"${identifier}"`;
 };
 
+const createDatabaseSlug = (schoolName: string) => {
+  const slug = schoolName
+    .trim()
+    .toLowerCase()
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, "_")
+    .replace(/^_+|_+$/g, "")
+    .replace(/_+/g, "_");
+
+  return slug || "tenant";
+};
+
+const buildSchoolDatabaseName = async (schoolName: string) => {
+  const baseName = createDatabaseSlug(schoolName).slice(0, 55);
+  const existingBaseName = await prisma.tenantDatabase.findUnique({
+    where: { databaseName: baseName },
+    select: { id: true },
+  });
+
+  if (!existingBaseName) {
+    return baseName;
+  }
+
+  for (let index = 2; index <= 99; index += 1) {
+    const suffix = `_${index}`;
+    const databaseName = `${baseName.slice(0, 63 - suffix.length)}${suffix}`;
+    const existingDatabase = await prisma.tenantDatabase.findUnique({
+      where: { databaseName },
+      select: { id: true },
+    });
+
+    if (!existingDatabase) {
+      return databaseName;
+    }
+  }
+
+  const suffix = `_${randomUUID().replace(/-/g, "").slice(0, 6)}`;
+  return `${baseName.slice(0, 63 - suffix.length)}${suffix}`;
+};
+
 export const buildTenantDatabaseUrl = (databaseName: string) => {
   const baseUrl = config.postgresAdminUrl || config.databaseUrl;
 
@@ -50,6 +91,30 @@ const createTenantDatabase = async (databaseName: string) => {
 
   try {
     await pool.query(`CREATE DATABASE ${quoteIdentifier(databaseName)}`);
+  } finally {
+    await pool.end();
+  }
+};
+
+const dropTenantDatabase = async (databaseName: string) => {
+  const adminUrl = config.postgresAdminUrl || config.databaseUrl;
+
+  if (!adminUrl) {
+    throw new Error("POSTGRES_ADMIN_URL or DATABASE_URL is required");
+  }
+
+  const pool = new Pool({ connectionString: adminUrl });
+
+  try {
+    await pool.query(
+      `
+        SELECT pg_terminate_backend(pid)
+        FROM pg_stat_activity
+        WHERE datname = $1 AND pid <> pg_backend_pid()
+      `,
+      [databaseName],
+    );
+    await pool.query(`DROP DATABASE IF EXISTS ${quoteIdentifier(databaseName)}`);
   } finally {
     await pool.end();
   }
@@ -150,7 +215,7 @@ const createSchool = async (payload: CreateSchoolRequest, actorUserId: string) =
     throw new DuplicateSchoolEmailError(schoolEmail);
   }
 
-  const databaseName = `school_${randomUUID().replace(/-/g, "").slice(0, 24)}`;
+  const databaseName = await buildSchoolDatabaseName(payload.schoolName);
 
   const school = await prisma.school.create({
     data: {
@@ -250,7 +315,110 @@ const createSchool = async (payload: CreateSchoolRequest, actorUserId: string) =
   }
 };
 
+const updateSchoolStatus = async (
+  schoolId: string,
+  status: "ACTIVE" | "SUSPENDED",
+  actorUserId: string,
+) => {
+  const school = await prisma.school.findUnique({
+    where: { id: schoolId },
+    select: { id: true, schoolName: true, status: true },
+  });
+
+  if (!school) {
+    throw new AppError(404, "School not found", "SCHOOL_NOT_FOUND");
+  }
+
+  return prisma.school.update({
+    where: { id: schoolId },
+    data: {
+      status,
+      errorMessage: null,
+      auditLogs: {
+        create: {
+          actorUserId,
+          action: `SCHOOL_${status}`,
+          metadata: {
+            previousStatus: school.status,
+            schoolName: school.schoolName,
+          },
+        },
+      },
+    },
+    include: {
+      tenantDatabase: true,
+    },
+  });
+};
+
+const permanentlyDeleteSchool = async (
+  schoolId: string,
+  confirmationSchoolName: string,
+  actorUserId: string,
+) => {
+  const school = await prisma.school.findUnique({
+    where: { id: schoolId },
+    include: { tenantDatabase: true },
+  });
+
+  if (!school) {
+    throw new AppError(404, "School not found", "SCHOOL_NOT_FOUND");
+  }
+
+  if (confirmationSchoolName.trim() !== school.schoolName) {
+    throw new AppError(
+      400,
+      "School name confirmation does not match",
+      "SCHOOL_DELETE_CONFIRMATION_MISMATCH",
+      undefined,
+      { expected: school.schoolName },
+    );
+  }
+
+  await prisma.auditLog.create({
+    data: {
+      actorUserId,
+      schoolId: school.id,
+      action: "SCHOOL_PERMANENT_DELETE_REQUESTED",
+      metadata: {
+        schoolName: school.schoolName,
+        schoolEmail: school.schoolEmail,
+        databaseName: school.tenantDatabase?.databaseName || null,
+      },
+    },
+  });
+
+  if (school.tenantDatabase?.databaseName) {
+    await dropTenantDatabase(school.tenantDatabase.databaseName);
+  }
+
+  await prisma.school.delete({
+    where: { id: school.id },
+  });
+
+  await prisma.auditLog.create({
+    data: {
+      actorUserId,
+      action: "SCHOOL_PERMANENT_DELETED",
+      metadata: {
+        schoolName: school.schoolName,
+        schoolEmail: school.schoolEmail,
+        databaseName: school.tenantDatabase?.databaseName || null,
+      },
+    },
+  });
+
+  return {
+    id: school.id,
+    schoolName: school.schoolName,
+    schoolEmail: school.schoolEmail,
+    databaseName: school.tenantDatabase?.databaseName || null,
+  };
+};
+
 export const schoolService = {
   listSchools,
   createSchool,
+  updateSchoolStatus,
+  permanentlyDeleteSchool,
 };
