@@ -2,6 +2,7 @@
 
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import Swal from "sweetalert2";
+import SchoolLoginPanel from "../components/SchoolLoginPanel";
 import {
   BarChart3,
   Archive,
@@ -24,6 +25,7 @@ import {
   FileBadge,
   FileCheck2,
   FileText,
+  ExternalLink,
   GraduationCap,
   Home as HomeIcon,
   IdCard,
@@ -821,10 +823,17 @@ export default function Home() {
                 </div>
               </nav>
 
-              <div className="border-t border-slate-200 p-4">
+              <div className="space-y-2 border-t border-slate-200 p-4">
+                <button
+                  className="flex h-10 w-full cursor-pointer items-center justify-center gap-2 rounded-md bg-blue-700 px-4 text-sm font-medium text-white hover:bg-blue-800"
+                  type="button"
+                >
+                  <ExternalLink className="h-4 w-4" />
+                  Go to Website
+                </button>
                 <button
                   onClick={logout}
-                  className="h-10 w-full rounded-md border border-slate-300 bg-white px-4 text-sm font-medium text-slate-700 hover:bg-slate-50"
+                  className="h-10 w-full cursor-pointer rounded-md bg-red-500 px-4 text-sm font-medium text-white hover:bg-red-600"
                   type="button"
                 >
                   Logout
@@ -1096,99 +1105,18 @@ export default function Home() {
 
   if (!user) {
     return (
-      <main className="min-h-screen bg-neutral-100 px-4 py-8 text-neutral-950">
-        <section className="mx-auto flex min-h-[calc(100vh-4rem)] w-full max-w-md flex-col justify-center">
-          <div className="mb-8">
-            <p className="text-sm font-medium uppercase tracking-[0.18em] text-teal-700">
-              {loginMode === "platform"
-                ? "Platform Control Plane"
-                : "School Tenant"}
-            </p>
-            <h1 className="mt-3 text-3xl font-semibold tracking-tight">
-              School Management Demo
-            </h1>
-            <p className="mt-3 text-sm leading-6 text-neutral-600">
-              {loginMode === "platform"
-                ? "Sign in as Super Admin to create schools and provision separate tenant databases."
-                : "Sign in with the school email and initial admin password created during provisioning."}
-            </p>
-          </div>
-
-          <form
-            onSubmit={loginMode === "platform" ? handleLogin : handleSchoolLogin}
-            className="rounded-lg border border-neutral-200 bg-white p-5 shadow-sm"
-          >
-            <div className="mb-5 grid grid-cols-2 gap-2 rounded-md bg-neutral-100 p-1">
-              <button
-                className={`h-10 rounded text-sm font-semibold ${
-                  loginMode === "platform"
-                    ? "bg-white text-teal-700 shadow-sm"
-                    : "text-neutral-600"
-                }`}
-                onClick={() => {
-                  setLoginMode("platform");
-                  setEmail("superadmin@example.com");
-                  setPassword("Admin@12345");
-                  setMessage("");
-                }}
-                type="button"
-              >
-                Platform
-              </button>
-              <button
-                className={`h-10 rounded text-sm font-semibold ${
-                  loginMode === "school"
-                    ? "bg-white text-teal-700 shadow-sm"
-                    : "text-neutral-600"
-                }`}
-                onClick={() => {
-                  setLoginMode("school");
-                  setEmail("");
-                  setPassword("");
-                  setMessage("");
-                }}
-                type="button"
-              >
-                School
-              </button>
-            </div>
-            <label className="block text-sm font-medium text-neutral-700">
-              Email
-              <input
-                value={email}
-                onChange={(event) => setEmail(event.target.value)}
-                className="mt-2 h-11 w-full rounded-md border border-neutral-300 px-3 text-sm outline-none focus:border-teal-700"
-                type="email"
-                required
-              />
-            </label>
-            <label className="mt-4 block text-sm font-medium text-neutral-700">
-              Password
-              <input
-                value={password}
-                onChange={(event) => setPassword(event.target.value)}
-                className="mt-2 h-11 w-full rounded-md border border-neutral-300 px-3 text-sm outline-none focus:border-teal-700"
-                type="password"
-                required
-              />
-            </label>
-            <button
-              className="mt-5 h-11 w-full rounded-md bg-teal-700 px-4 text-sm font-semibold text-white hover:bg-teal-800 disabled:cursor-not-allowed disabled:bg-neutral-400"
-              disabled={isLoading}
-              type="submit"
-            >
-              {isLoading
-                ? "Signing in..."
-                : loginMode === "platform"
-                  ? "Sign in as Platform Admin"
-                  : "Sign in as School Admin"}
-            </button>
-            {message ? (
-              <p className="mt-4 text-sm text-neutral-700">{message}</p>
-            ) : null}
-          </form>
-        </section>
-      </main>
+      <SchoolLoginPanel
+        email={email}
+        isLoading={isLoading}
+        loginMode={loginMode}
+        message={message}
+        onSubmit={loginMode === "platform" ? handleLogin : handleSchoolLogin}
+        password={password}
+        setEmail={setEmail}
+        setLoginMode={setLoginMode}
+        setMessage={setMessage}
+        setPassword={setPassword}
+      />
     );
   }
 
