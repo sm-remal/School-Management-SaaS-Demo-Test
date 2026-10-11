@@ -116,6 +116,7 @@ const apiBaseUrl =
   "http://localhost:5000";
 
 const sessionStorageKey = "school-management-demo-session";
+const schoolsPerPage = 6;
 const auditLogsPerPage = 10;
 
 type SidebarItem = {
@@ -328,12 +329,12 @@ const schoolMetricCards = [
 ];
 
 const quickModules = [
-  { label: "Attendance", icon: CheckSquare, color: "bg-emerald-50 text-emerald-700" },
-  { label: "Routine", icon: CalendarDays, color: "bg-sky-50 text-sky-700" },
-  { label: "Library", icon: Library, color: "bg-amber-50 text-amber-700" },
-  { label: "Transport", icon: Bus, color: "bg-indigo-50 text-indigo-700" },
-  { label: "Receipts", icon: Receipt, color: "bg-rose-50 text-rose-700" },
-  { label: "Certificates", icon: FileBadge, color: "bg-violet-50 text-violet-700" },
+  { label: "Attendance", icon: CheckSquare, color: "bg-emerald-100 text-emerald-700", surface: "border-emerald-100 bg-emerald-50/70 hover:bg-emerald-50" },
+  { label: "Routine", icon: CalendarDays, color: "bg-sky-100 text-sky-700", surface: "border-sky-100 bg-sky-50/70 hover:bg-sky-50" },
+  { label: "Library", icon: Library, color: "bg-amber-100 text-amber-700", surface: "border-amber-100 bg-amber-50/70 hover:bg-amber-50" },
+  { label: "Transport", icon: Bus, color: "bg-indigo-100 text-indigo-700", surface: "border-indigo-100 bg-indigo-50/70 hover:bg-indigo-50" },
+  { label: "Receipts", icon: Receipt, color: "bg-rose-100 text-rose-700", surface: "border-rose-100 bg-rose-50/70 hover:bg-rose-50" },
+  { label: "Certificates", icon: FileBadge, color: "bg-violet-100 text-violet-700", surface: "border-violet-100 bg-violet-50/70 hover:bg-violet-50" },
 ];
 
 type StoredSession =
@@ -374,6 +375,7 @@ export default function Home() {
   const [deleteConfirmation, setDeleteConfirmation] = useState("");
   const [showInitialAdminPassword, setShowInitialAdminPassword] =
     useState(false);
+  const [schoolPage, setSchoolPage] = useState(1);
   const [auditLogPage, setAuditLogPage] = useState(1);
 
   const activeSchools = useMemo(
@@ -385,6 +387,16 @@ export default function Home() {
     () => schools.filter((school) => school.status === "FAILED").length,
     [schools],
   );
+
+  const schoolPageCount = Math.max(
+    1,
+    Math.ceil(schools.length / schoolsPerPage),
+  );
+  const currentSchoolPage = Math.min(schoolPage, schoolPageCount);
+  const paginatedSchools = useMemo(() => {
+    const startIndex = (currentSchoolPage - 1) * schoolsPerPage;
+    return schools.slice(startIndex, startIndex + schoolsPerPage);
+  }, [currentSchoolPage, schools]);
 
   const auditLogPageCount = Math.max(
     1,
@@ -636,6 +648,7 @@ export default function Home() {
       setSchoolName("");
       setSchoolEmail("");
       setInitialAdminPassword("School@12345");
+      setSchoolPage(1);
       await fetchSchools();
       await fetchAuditLogs();
       await Swal.fire({
@@ -954,7 +967,7 @@ export default function Home() {
                   </div>
 
                   <div className="grid gap-5 xl:grid-cols-2">
-                    <div className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
+                    <div className="rounded-lg border border-blue-100 bg-blue-50/70 p-5 shadow-sm">
                       <div className="flex items-center gap-2">
                         <BarChart3 className="h-5 w-5 text-blue-700" />
                         <h3 className="font-semibold">Academic Snapshot</h3>
@@ -981,31 +994,31 @@ export default function Home() {
                       </div>
                     </div>
 
-                    <div className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
+                    <div className="rounded-lg border border-emerald-100 bg-emerald-50/70 p-5 shadow-sm">
                       <div className="flex items-center gap-2">
-                        <WalletCards className="h-5 w-5 text-blue-700" />
+                        <WalletCards className="h-5 w-5 text-emerald-700" />
                         <h3 className="font-semibold">Finance Snapshot</h3>
                       </div>
                       <div className="mt-5 grid gap-3 sm:grid-cols-2">
-                        <div className="rounded-md bg-slate-50 p-4">
+                        <div className="rounded-md border border-emerald-100 bg-white/80 p-4">
                           <p className="text-xs uppercase text-slate-400">
                             Fee collection
                           </p>
                           <p className="mt-2 text-xl font-semibold">72%</p>
                         </div>
-                        <div className="rounded-md bg-slate-50 p-4">
+                        <div className="rounded-md border border-emerald-100 bg-white/80 p-4">
                           <p className="text-xs uppercase text-slate-400">
                             Receipts
                           </p>
                           <p className="mt-2 text-xl font-semibold">31</p>
                         </div>
-                        <div className="rounded-md bg-slate-50 p-4">
+                        <div className="rounded-md border border-emerald-100 bg-white/80 p-4">
                           <p className="text-xs uppercase text-slate-400">
                             Expenses
                           </p>
                           <p className="mt-2 text-xl font-semibold">8</p>
                         </div>
-                        <div className="rounded-md bg-slate-50 p-4">
+                        <div className="rounded-md border border-emerald-100 bg-white/80 p-4">
                           <p className="text-xs uppercase text-slate-400">
                             Salaries
                           </p>
@@ -1062,7 +1075,7 @@ export default function Home() {
                         const Icon = module.icon;
                         return (
                           <button
-                            className="rounded-md border border-slate-200 p-3 text-left hover:bg-slate-50"
+                            className={`cursor-pointer rounded-md border p-3 text-left transition ${module.surface}`}
                             key={module.label}
                             type="button"
                           >
@@ -1175,27 +1188,30 @@ export default function Home() {
               value: schools.length,
               helper: "Registered tenants",
               icon: Building2,
-              color: "bg-blue-50 text-blue-700",
+              color: "bg-blue-100 text-blue-700",
+              surface: "border-blue-100 bg-blue-50/70",
             },
             {
               label: "Active",
               value: activeSchools,
               helper: "Ready for school login",
               icon: CheckCircle2,
-              color: "bg-emerald-50 text-emerald-700",
+              color: "bg-emerald-100 text-emerald-700",
+              surface: "border-emerald-100 bg-emerald-50/70",
             },
             {
               label: "Failed",
               value: failedSchools,
               helper: "Need review or retry",
               icon: AlertTriangle,
-              color: "bg-red-50 text-red-700",
+              color: "bg-red-100 text-red-700",
+              surface: "border-red-100 bg-red-50/70",
             },
           ].map((metric) => {
             const Icon = metric.icon;
             return (
               <div
-                className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm"
+                className={`rounded-lg border p-5 shadow-sm ${metric.surface}`}
                 key={metric.label}
               >
                 <div className="flex items-center justify-between gap-4">
@@ -1360,6 +1376,7 @@ export default function Home() {
               <table className="w-full min-w-[980px] border-collapse text-left text-sm">
                 <thead>
                   <tr className="border-b border-slate-200 bg-slate-50 text-slate-500">
+                    <th className="w-20 px-5 py-3 font-medium">SL</th>
                     <th className="px-5 py-3 font-medium">School</th>
                     <th className="px-5 py-3 font-medium">Status</th>
                     <th className="px-5 py-3 font-medium">Database</th>
@@ -1372,17 +1389,20 @@ export default function Home() {
                     <tr>
                       <td
                         className="px-5 py-12 text-center text-slate-500"
-                        colSpan={5}
+                        colSpan={6}
                       >
                         No schools yet.
                       </td>
                     </tr>
                   ) : (
-                    schools.map((school) => (
+                    paginatedSchools.map((school, index) => (
                       <tr
                         className="border-b border-slate-100 last:border-0 hover:bg-slate-50"
                         key={school.id}
                       >
+                        <td className="px-5 py-4 font-medium text-slate-500">
+                          {(currentSchoolPage - 1) * schoolsPerPage + index + 1}
+                        </td>
                         <td className="px-5 py-4">
                           <p className="font-medium text-slate-900">
                             {school.schoolName}
@@ -1472,6 +1492,54 @@ export default function Home() {
                   )}
                 </tbody>
               </table>
+            </div>
+            <div className="flex flex-col gap-3 border-t border-slate-200 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+              <p className="text-sm text-slate-500">
+                Showing{" "}
+                <span className="font-medium text-slate-700">
+                  {schools.length === 0
+                    ? 0
+                    : (currentSchoolPage - 1) * schoolsPerPage + 1}
+                </span>{" "}
+                to{" "}
+                <span className="font-medium text-slate-700">
+                  {Math.min(currentSchoolPage * schoolsPerPage, schools.length)}
+                </span>{" "}
+                of{" "}
+                <span className="font-medium text-slate-700">
+                  {schools.length}
+                </span>{" "}
+                schools
+              </p>
+              <div className="flex items-center gap-2">
+                <button
+                  className="h-9 cursor-pointer rounded-md border border-slate-300 bg-white px-3 text-sm font-medium hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+                  disabled={currentSchoolPage === 1}
+                  onClick={() =>
+                    setSchoolPage((currentPage) =>
+                      Math.max(1, currentPage - 1),
+                    )
+                  }
+                  type="button"
+                >
+                  Previous
+                </button>
+                <span className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-600">
+                  Page {currentSchoolPage} of {schoolPageCount}
+                </span>
+                <button
+                  className="h-9 cursor-pointer rounded-md border border-slate-300 bg-white px-3 text-sm font-medium hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+                  disabled={currentSchoolPage === schoolPageCount}
+                  onClick={() =>
+                    setSchoolPage((currentPage) =>
+                      Math.min(schoolPageCount, currentPage + 1),
+                    )
+                  }
+                  type="button"
+                >
+                  Next
+                </button>
+              </div>
             </div>
           </section>
         </div>
