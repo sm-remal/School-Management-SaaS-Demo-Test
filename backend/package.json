@@ -4,9 +4,10 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "dev": "node api.js && tsx watch src/index.ts",
-    "build": "node api.js && tsup",
-    "start": "node api.js && node dist/index.js",
+    "dev": "tsx watch src/server.ts",
+    "build": "prisma generate && tsup",
+    "start": "node dist/server.js",
+    "typecheck": "tsc --noEmit",
     "prisma:generate": "prisma generate",
     "prisma:seed": "tsx prisma/seed.ts",
     "test": "echo \"Error: no test specified\" && exit 1"
