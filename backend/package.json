@@ -4,15 +4,12 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "dev": "node api.js && tsx watch src/server.ts",
-    "build": "prisma generate && node api.js && tsc",
-    "start": "node api.js && node dist/src/server.js",
-    "typecheck": "tsc --noEmit",
+    "dev": "node api.js && tsx watch src/index.ts",
+    "build": "node api.js && tsup",
+    "start": "node api.js && node dist/index.js",
     "prisma:generate": "prisma generate",
-    "prisma:migrate": "prisma migrate dev",
-    "prisma:studio": "prisma studio",
     "prisma:seed": "tsx prisma/seed.ts",
-    "test": "npm run typecheck"
+    "test": "echo \"Error: no test specified\" && exit 1"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"
@@ -24,7 +21,6 @@
     "@types/cors": "^2.8.19",
     "@types/express": "^5.0.6",
     "@types/jsonwebtoken": "^9.0.10",
-    "@types/node": "^26.6.5",
     "@types/pg": "^8.23.1",
     "prisma": "^7.10.0",
     "tsx": "^4.23.15",
@@ -33,6 +29,7 @@
   "dependencies": {
     "@prisma/adapter-pg": "^7.10.0",
     "@prisma/client": "^7.10.0",
+    "@types/node": "^26.6.5",
     "bcryptjs": "^3.0.3",
     "cors": "^2.8.6",
     "dotenv": "^18.0.7",
