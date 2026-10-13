@@ -1,5 +1,0 @@
-
-> backend@1.0.0 start
-> node dist/src/server.js
-
-School Management server is running on 5000
