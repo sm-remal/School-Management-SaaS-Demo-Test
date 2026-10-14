@@ -20,6 +20,70 @@ Platform Super Admin login
 
 This is not the full School Management System. Student admission, attendance, fees, exams, payroll, accounting, OMR, SMS/email campaign, subscription/billing, and full custom-domain automation are intentionally out of scope for this demo.
 
+## Future Domain Architecture Decision
+
+The project should evolve toward a production-style SaaS domain model with separate concerns for the main SaaS site, platform admin, school admin software, and public school websites.
+
+Target domain structure:
+
+```txt
+Main SaaS marketing:
+yoursaas.com
+
+Platform Super Admin:
+admin.yoursaas.com
+
+School Admin Software:
+app.yoursaas.com
+or school-slug.yoursaas.com/admin
+
+Public School Website:
+custom domain: www.schoolname.com
+```
+
+Recommended implementation direction:
+
+- Keep the core SaaS/admin software centralized under `app.yoursaas.com`.
+- Keep Platform Super Admin under `admin.yoursaas.com`.
+- Give each school a public website URL that can later use either a platform subdomain or a custom domain.
+- Use `Website Settings` for public website content/configuration.
+- Use `Domain` for DNS/custom-domain setup and verification.
+- Use `Go to Website` to open the active public website URL for the current school.
+
+Production routing rule:
+
+```txt
+request host
+-> central domain registry
+-> school
+-> tenant database
+```
+
+Do not trust tenant database names or tenant identity from the client. Always resolve domain/host to school and tenant database from the central platform database.
+
+Suggested future data model additions:
+
+```txt
+schools.slug
+school_domains
+- id
+- school_id
+- domain
+- status: PENDING_VERIFICATION | VERIFIED | ACTIVE | FAILED | DISABLED
+- verification_token
+- verified_at
+- created_at
+- updated_at
+```
+
+Suggested future rollout:
+
+1. Add `schools.slug` and support school public URLs such as `school-slug.yoursaas.com`.
+2. Add a central `school_domains` table.
+3. Add DNS verification flow for custom domains.
+4. Add domain resolver middleware that maps `Host` to the active school and tenant database.
+5. Add SSL/custom-domain automation later through the hosting provider, CDN, reverse proxy, or a service such as Vercel Domains, Cloudflare for SaaS, Caddy, Traefik, or Nginx plus Certbot.
+
 ## Tech Stack
 
 - Frontend: Next.js + TypeScript + Tailwind CSS
