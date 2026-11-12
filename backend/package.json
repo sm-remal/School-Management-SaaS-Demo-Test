@@ -5,9 +5,9 @@
   "main": "index.js",
   "scripts": {
     "postinstall": "prisma generate",
-    "dev": "node init && tsx watch src/server.ts",
-    "build": "node init && prisma generate && tsup",
-    "start": "node init && node dist/server.js",
+    "dev": "node && tsx watch src/server.ts",
+    "build": "node && prisma generate && tsup",
+    "start": "node && node dist/server.js",
     "typecheck": "tsc --noEmit",
     "prisma:generate": "prisma generate",
     "prisma:seed": "tsx prisma/seed.ts",
